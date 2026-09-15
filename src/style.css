@@ -1,0 +1,256 @@
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --panel-light: #334155;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --ok: #22c55e;
+  --danger: #ef4444;
+  --door-closed: #475569;
+  --door-open: #0ea5e9;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.panel {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 24px;
+  margin: 0 0 24px;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+/* ---- 舱体与门 ---- */
+.chamber {
+  display: grid;
+  grid-template-columns: 110px 1fr 110px;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.door {
+  border-radius: 10px;
+  border: 2px solid var(--door-closed);
+  background: var(--door-closed);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 150px;
+  transition: all 0.2s ease;
+}
+
+.door.open {
+  border-color: var(--door-open);
+  background: rgba(14, 165, 233, 0.25);
+  box-shadow: inset 0 0 24px rgba(14, 165, 233, 0.35);
+}
+
+.door-name {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.door-state {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.door.open .door-state {
+  color: var(--accent);
+}
+
+.chamber-body {
+  border: 2px dashed var(--panel-light);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  background: rgba(51, 65, 85, 0.25);
+}
+
+.chamber-title {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chamber-item {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* ---- 状态条 ---- */
+.status-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+
+.status-cell {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status-label {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status-value {
+  font-weight: 700;
+}
+
+/* ---- 结果 ---- */
+.outcome {
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.outcome.success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid var(--ok);
+  color: var(--ok);
+}
+
+.outcome.locked {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--danger);
+  color: #fca5a5;
+}
+
+.outcome.none {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid var(--panel-light);
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.violation-detail {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+/* ---- 按钮 ---- */
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 26px;
+}
+
+.btn {
+  padding: 14px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-light);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn.expected {
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.reset-btn {
+  grid-column: 1 / -1;
+  border-color: var(--danger);
+  color: #fca5a5;
+}
+
+.reset-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+/* ---- 记录 ---- */
+.log-empty {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.log-table th,
+.log-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--panel-light);
+}
+
+.log-table th {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.log-table tr.bad {
+  color: #fca5a5;
+}
+
+.log-table tr.ok {
+  color: var(--text);
+}
+
+@media (max-width: 560px) {
+  .chamber {
+    grid-template-columns: 72px 1fr 72px;
+  }
+
+  .controls {
+    grid-template-columns: 1fr 1fr;
+  }
+}
