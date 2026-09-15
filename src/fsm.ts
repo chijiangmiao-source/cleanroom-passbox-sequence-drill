@@ -252,7 +252,9 @@ export function selectView(state: MachineState): PanelView {
   }
 }
 
-/** 面板上除复位外的八个流程操作（严格按成功路径排序） */
+/**
+ * 面板上除复位外的八个流程操作（严格按成功路径排序）
+ */
 export const FLOW_ACTIONS: ActionKind[] = [
   'openOuter',
   'loadItem',
@@ -263,3 +265,61 @@ export const FLOW_ACTIONS: ActionKind[] = [
   'unloadItem',
   'closeInner',
 ]
+
+// ================= 复盘：用本轮既有动作序列重放，生成只读快照 =================
+
+/**
+ * 单个记录点的只读复盘快照。
+ *
+ * 复盘以「本轮既有的操作记录」为唯一输入：从初始态开始，用同一个
+ * `dispatch` 逐条重放记录的动作前缀重新裁决。现场状态与原始记录均不被改写。
+ */
+export interface ReplaySnapshot {
+  /** 该前缀重放裁决后的状态（与当时逐动作得到的投影一致） */
+  state: MachineState
+  view: PanelView
+  /** 该记录点所执行操作的合法性（游标 0 的初始快照为 null） */
+  entryOk: boolean | null
+  /** 该记录点的期望操作（游标 0 时为第一步 openOuter） */
+  expectedAction: ActionKind | null
+  /** 是否停在违例记录上（重放已裁决为 locked） */
+  atViolation: boolean
+}
+
+/**
+ * 把游标约束为合法记录点：非有限值 / 负数 / 超出记录总数等一切越界情形
+ * 一律回落到 0（初始快照），保证复盘永不因游标异常抛出页面错误。
+ */
+function clampCursor(cursor: number, max: number): number {
+  if (!Number.isFinite(cursor)) return 0
+  const n = Math.trunc(cursor)
+  if (n < 0 || n > max) return 0
+  return n
+}
+
+/**
+ * 按动作前缀重放：取记录前 `cursor` 条（0 = 初始态，log.length = 终局），
+ * 从初始态重新裁决。非法记录会自然在重放中再次锁定，与原状态投影一致。
+ *
+ * 空记录或任何越界 / 非有限游标都回落到初始快照，不抛出页面错误。
+ */
+export function replayAt(finalState: MachineState, cursor: number): ReplaySnapshot {
+  const at = clampCursor(cursor, finalState.log.length)
+  let state: MachineState = { ...INITIAL_STATE, log: [] }
+  for (let i = 0; i < at; i++) {
+    state = dispatch(state, finalState.log[i].action)
+  }
+  const entry = at > 0 ? finalState.log[at - 1] : null
+  return {
+    state,
+    view: selectView(state),
+    entryOk: entry ? entry.ok : null,
+    expectedAction: LEGAL_TRANSITIONS[state.stage] ?? null,
+    atViolation: state.stage === 'locked',
+  }
+}
+
+/** 一轮是否已结束（成功或锁定）：只有结束轮次可进入复盘 */
+export function isRoundFinished(state: MachineState): boolean {
+  return state.stage === 'done' || state.stage === 'locked'
+}

@@ -212,6 +212,185 @@ h2 {
   background: rgba(239, 68, 68, 0.18);
 }
 
+/* ---- 复盘 ---- */
+.replay-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+
+.replay-tag {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.replay-hint {
+  color: var(--muted);
+}
+
+.steps {
+  margin-bottom: 18px;
+}
+
+.step-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.step-item {
+  border: 1px solid var(--panel-light);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--panel);
+  opacity: 0.7;
+}
+
+.step-item.passed {
+  opacity: 1;
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.step-item.current {
+  opacity: 1;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.step-item.expected {
+  opacity: 1;
+  border-color: var(--accent);
+  background: rgba(56, 189, 248, 0.18);
+}
+
+.step-item.actual {
+  opacity: 1;
+  border-color: var(--danger);
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.step-no {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.step-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.step-flag {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 1px 6px;
+  align-self: flex-start;
+}
+
+.expected-flag {
+  background: rgba(56, 189, 248, 0.25);
+  color: var(--accent);
+}
+
+.actual-flag {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+}
+
+.replay-violation {
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid var(--danger);
+  color: #fca5a5;
+  font-size: 13px;
+}
+
+.replay-controls {
+  background: var(--panel);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 26px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider-end {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.replay-slider {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.slider-position {
+  margin: 10px 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.replay-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.exit-replay-btn {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.exit-replay-btn:hover {
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.replay-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 26px;
+}
+
+.start-replay-btn {
+  min-width: 220px;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.start-replay-btn:hover:not(:disabled) {
+  background: rgba(56, 189, 248, 0.15);
+}
+
+.replay-entry-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 /* ---- 记录 ---- */
 .log-empty {
   color: var(--muted);
@@ -245,6 +424,15 @@ h2 {
   color: var(--text);
 }
 
+.log-table tr.replay-current td {
+  background: rgba(56, 189, 248, 0.18);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.log-table tr.replay-ahead {
+  opacity: 0.35;
+}
+
 @media (max-width: 560px) {
   .chamber {
     grid-template-columns: 72px 1fr 72px;
@@ -252,5 +440,15 @@ h2 {
 
   .controls {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .step-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .replay-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }

@@ -4,6 +4,8 @@ import {
   dispatch,
   FLOW_ACTIONS,
   INITIAL_STATE,
+  isRoundFinished,
+  replayAt,
   selectDoors,
   selectView,
   type ActionKind,
@@ -332,5 +334,159 @@ describe('操作记录', () => {
     for (const a of all) {
       expect(ACTION_LABELS[a]).toBeTruthy()
     }
+  })
+})
+
+// ---- 复盘：动作前缀重放 ------------------------------------------------------
+// 辅助：从初始态逐条执行动作，收集与「逐动作现场状态」等价的参考状态序列。
+function prefixStates(actions: ActionKind[]): MachineState[] {
+  const out: MachineState[] = [{ ...INITIAL_STATE, log: [] }]
+  let s: MachineState = { ...INITIAL_STATE, log: [] }
+  for (const a of actions) {
+    s = dispatch(s, a)
+    out.push(s)
+  }
+  return out
+}
+
+/** 以终局状态的记录为输入重放，应得到与逐动作投影一致的门 / 物品 / 步骤投影 */
+function expectReplayMatchesProjection(
+  final: MachineState,
+  references: MachineState[],
+): void {
+  for (let cursor = 0; cursor <= final.log.length; cursor++) {
+    const snap = replayAt(final, cursor)
+    const ref = references[cursor]
+    // 重放是对原始记录的只读重裁：不回写原始记录
+    expect(final.log).toHaveLength(references.length - 1)
+    expect(snap.state.stage).toBe(ref.stage)
+    expect(snap.state.log).toHaveLength(cursor)
+    expect(snap.view).toEqual(selectView(ref))
+    expect(snap.view.bothDoorsOpen).toBe(false)
+  }
+}
+
+describe('复盘：动作前缀重放与原状态投影一致', () => {
+  it('成功轮次：每个游标处的舱体 / 步骤投影与逐动作状态完全一致', () => {
+    const refs = prefixStates(FLOW_ACTIONS)
+    const done = refs[refs.length - 1]
+    expect(isRoundFinished(done)).toBe(true)
+    expectReplayMatchesProjection(done, refs)
+  })
+
+  it('成功轮次：中间游标（4 条前缀）还原净化启动时的状态', () => {
+    const refs = prefixStates(FLOW_ACTIONS)
+    const done = refs[refs.length - 1]
+    const snap = replayAt(done, 4)
+    expect(snap.state.stage).toBe('purifying')
+    expect(snap.view.doors.outerOpen).toBe(false)
+    expect(snap.view.doors.innerOpen).toBe(false)
+    expect(snap.expectedAction).toBe('confirmPurification')
+    expect(snap.entryOk).toBe(true)
+    expect(snap.atViolation).toBe(false)
+  })
+
+  it('锁定轮次：前缀重放逐一匹配，且在违例记录点冻结物理投影', () => {
+    // openOuter → loadItem → closeOuter → startPurification → openInner(违例)
+    const actions: ActionKind[] = [
+      'openOuter',
+      'loadItem',
+      'closeOuter',
+      'startPurification',
+      'openInner',
+    ]
+    const refs = prefixStates(actions)
+    const locked = refs[refs.length - 1]
+    expect(locked.stage).toBe('locked')
+    expect(isRoundFinished(locked)).toBe(true)
+    expectReplayMatchesProjection(locked, refs)
+
+    // 违例点（最后一条记录）重放裁决为 locked，物理投影冻结在 purifying：
+    // 双门关闭、物品仍在舱 —— 与当时现场一致，而非终局以外的任何状态。
+    const atViolation = replayAt(locked, locked.log.length)
+    expect(atViolation.atViolation).toBe(true)
+    expect(atViolation.state.violation).toEqual({
+      actual: 'openInner',
+      expected: 'confirmPurification',
+      stage: 'purifying',
+    })
+    expect(atViolation.view.hasItem).toBe(true)
+    expect(atViolation.view.doors.outerOpen).toBe(false)
+    expect(atViolation.view.currentStep).toBe(5)
+  })
+
+  it('内门开着的状态下违例：重放还原违例前的物理投影（内门仍开、物品在舱）', () => {
+    // 走到 innerOpen 后越序 closeInner（期望 unloadItem）
+    const actions: ActionKind[] = [
+      'openOuter',
+      'loadItem',
+      'closeOuter',
+      'startPurification',
+      'confirmPurification',
+      'openInner',
+      'closeInner',
+    ]
+    const refs = prefixStates(actions)
+    const locked = refs[refs.length - 1]
+    const atViolation = replayAt(locked, locked.log.length)
+    expect(atViolation.atViolation).toBe(true)
+    expect(atViolation.view.doors.innerOpen).toBe(true)
+    expect(atViolation.view.hasItem).toBe(true)
+    expect(atViolation.view.doors.outerOpen).toBe(false)
+    expect(atViolation.state.violation?.expected).toBe('unloadItem')
+    expect(atViolation.state.violation?.actual).toBe('closeInner')
+  })
+
+  it('重放不会改写原始记录与原始终局状态', () => {
+    const done = FLOW_ACTIONS.reduce<MachineState>(
+      (s, a) => dispatch(s, a),
+      { ...INITIAL_STATE, log: [] },
+    )
+    const frozen = structuredClone(done)
+    replayAt(done, 0)
+    replayAt(done, 4)
+    replayAt(done, done.log.length)
+    expect(done).toEqual(frozen)
+  })
+})
+
+describe('复盘：游标边界', () => {
+  it('空记录：任意游标都回落到初始快照', () => {
+    const empty: MachineState = { ...INITIAL_STATE, log: [] }
+    expect(isRoundFinished(empty)).toBe(false)
+    for (const cursor of [0, 1, 99, -5, 1.5, NaN, Infinity, -Infinity]) {
+      const snap = replayAt(empty, cursor)
+      expect(snap.state.stage).toBe('idle')
+      expect(snap.state.log).toHaveLength(0)
+      expect(snap.view).toEqual(selectView(INITIAL_STATE))
+      expect(snap.entryOk).toBeNull()
+      expect(snap.atViolation).toBe(false)
+    }
+  })
+
+  it('非空记录上的越界 / 非法游标：一律回落初始快照', () => {
+    const done = FLOW_ACTIONS.reduce<MachineState>(
+      (s, a) => dispatch(s, a),
+      { ...INITIAL_STATE, log: [] },
+    )
+    for (const cursor of [-1, NaN, -Infinity, Infinity, 999, 100]) {
+      const snap = replayAt(done, cursor)
+      expect(snap.state.stage).toBe('idle')
+      expect(snap.state.log).toHaveLength(0)
+    }
+    // 合法边界与小数截断不受影响
+    expect(replayAt(done, 0).state.stage).toBe('idle')
+    expect(replayAt(done, 8).state.stage).toBe('done')
+    expect(replayAt(done, 2.9).state.log).toHaveLength(2)
+    expect(replayAt(done, 2.1).state.log).toHaveLength(2)
+  })
+
+  it('流程未结束（无记录 / 进行中）入口判定为不可复盘', () => {
+    expect(isRoundFinished({ ...INITIAL_STATE, log: [] })).toBe(false)
+    let s: MachineState = { ...INITIAL_STATE, log: [] }
+    for (const a of ['openOuter', 'loadItem'] as ActionKind[]) {
+      s = dispatch(s, a)
+    }
+    expect(isRoundFinished(s)).toBe(false)
   })
 })
